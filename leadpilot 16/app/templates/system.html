@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+{% from "_macros.html" import page_header, badge %}
+{% block title %}System · {{ app_name }}{% endblock %}
+{% block content %}
+{{ page_header("System", "Read-only configuration and health. Secrets are never shown.") }}
+<section class="rounded-xl border border-slate-200 bg-white shadow-sm">
+  <dl class="divide-y divide-slate-100 text-sm">
+    {% for label, (value, extra, ok) in info.items() %}
+      <div class="flex items-center justify-between gap-4 px-5 py-3">
+        <dt class="text-slate-500">{{ label }}</dt>
+        <dd class="flex items-center gap-2 font-medium text-slate-800">{{ value }}{% if extra %} <span class="text-slate-400">({{ extra }})</span>{% endif %}
+          {{ badge("ok" if ok else "check", "green" if ok else "amber") }}</dd>
+      </div>
+    {% endfor %}
+  </dl>
+</section>
+<section class="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+  <div class="mb-2 font-medium">Prompt files</div>
+  <p class="mb-2 text-sm text-slate-500">Edit these in the <code>prompts/</code> folder. The version name is logged on every generation.</p>
+  <div class="flex flex-wrap gap-2">{% for p in prompts %}<code class="rounded bg-slate-100 px-2 py-1 text-xs">{{ p }}</code>{% endfor %}</div>
+</section>
+{% endblock %}

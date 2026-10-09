@@ -1,0 +1,58 @@
+{% from "_macros.html" import badge %}
+{% if error %}
+  <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">{{ error }}</div>
+{% else %}
+  <div class="mb-4 flex flex-wrap items-center gap-3 text-sm">
+    {{ badge("all ready" if res.status == "ready" else "needs your review", "green" if res.status == "ready" else "amber") }}
+    <span class="text-slate-500">{{ res.llm_calls }} AI calls · ~${{ '%.3f' | format(res.cost_usd) }}{% if res.rewritten %} · rewritten once to fix problems{% endif %}</span>
+  </div>
+  <div class="space-y-5">
+  {% for e in res.emails %}
+    <article class="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <header class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-3">
+        <div class="flex items-center gap-2 font-medium">Email {{ e.step }} <span class="text-sm font-normal text-slate-500">· day {{ e.offset_days }} · {{ e.words }} words</span></div>
+        {{ badge("ready" if e.status == "ready" else "needs review", "green" if e.status == "ready" else "amber") }}
+      </header>
+      <div class="space-y-4 p-5">
+        <div>
+          <div class="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Subject variants (A/B/C)</div>
+          <ul class="space-y-1 text-sm">
+            {% for s in e.subjects %}
+              <li class="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-1.5"><span id="subj-{{ e.step }}-{{ loop.index }}">{{ s }}</span>
+                <button type="button" data-copy data-copy-target="#subj-{{ e.step }}-{{ loop.index }}" class="shrink-0 text-xs text-slate-400 hover:text-slate-700">Copy</button></li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div>
+          <div class="mb-1 flex items-center justify-between"><span class="text-xs font-medium uppercase tracking-wide text-slate-500">Email (greeting, signature and footer added automatically)</span>
+            <button type="button" data-copy data-copy-target="#email-{{ e.step }}" class="text-xs text-slate-400 hover:text-slate-700">Copy</button></div>
+          <pre id="email-{{ e.step }}" class="whitespace-pre-wrap break-words rounded-lg border border-slate-200 bg-slate-50 p-4 font-sans text-sm text-slate-800">{{ e.full_text }}</pre>
+        </div>
+        <div>
+          <div class="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Grounded in</div>
+          <div class="flex flex-wrap gap-1.5 text-xs">
+            {% for fid in e.fact_ids %}
+              {% for f in facts if f.id == fid %}<span class="rounded-md bg-indigo-50 px-2 py-0.5 text-indigo-700" title="{{ f.claim }}">{{ fid }}: {{ f.claim[:60] }}{{ '…' if f.claim | length > 60 else '' }}</span>{% endfor %}
+            {% else %}<span class="text-slate-400">No facts cited</span>{% endfor %}
+          </div>
+        </div>
+        {% if e.check %}
+          <div class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+            {% for label, v in [("Accuracy", e.check.factual_accuracy), ("Tone", e.check.tone_match), ("Spam safety", e.check.spam_safety), ("Compliance", e.check.compliance)] %}
+              <div class="rounded-lg border px-3 py-2 {{ 'border-green-200 bg-green-50 text-green-800' if v >= 4 else 'border-amber-200 bg-amber-50 text-amber-800' }}"><div class="text-[11px] uppercase tracking-wide opacity-70">{{ label }}</div><div class="text-base font-semibold">{{ v }}/5</div></div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        {% set all_issues = e.lint_issues + (e.check.issues if e.check else []) %}
+        {% if all_issues %}
+          <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <div class="mb-1 font-medium">Review before sending</div>
+            <ul class="list-disc space-y-0.5 pl-5">{% for i in all_issues %}<li>{{ i }}</li>{% endfor %}</ul>
+          </div>
+        {% endif %}
+      </div>
+    </article>
+  {% endfor %}
+  </div>
+  <p class="mt-4 text-xs text-slate-500">Drafts are not stored or sent from here. Phase 5 adds the approval queue; Phase 6 adds the compliance gate and unsubscribe page that replace the <code>{{ '{{unsubscribe_url}}' }}</code> placeholder.</p>
+{% endif %}

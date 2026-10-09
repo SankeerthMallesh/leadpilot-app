@@ -1,0 +1,53 @@
+{% extends "layout.html" %}
+{% from "_macros.html" import stat, bar, page_header, btn_class, icon %}
+{% block title %}Dashboard · {{ app_name }}{% endblock %}
+{% block content %}
+{{ page_header("Dashboard", "Where things stand across all clients.") }}
+
+{% if not api_ready %}
+  <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+    <strong>AI is not configured.</strong> Add <code class="rounded bg-amber-100 px-1">ANTHROPIC_API_KEY</code> to your <code class="rounded bg-amber-100 px-1">.env</code> and restart to enable ICP generation and the AI panel.
+  </div>
+{% endif %}
+
+<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+  {{ stat("Active clients", stats.active) }}
+  {{ stat("Paused", stats.paused) }}
+  {{ stat("Need ICP approval", stats.awaiting_icp, "Nothing runs until approved") }}
+  <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div class="text-xs font-medium uppercase tracking-wide text-slate-500">AI spend this month</div>
+    <div class="mt-1 text-2xl font-semibold text-slate-900">${{ '%.2f' | format(stats.spend) }}</div>
+    <div class="mt-2">{{ bar(stats.spend_pct) }}</div>
+    <div class="mt-1 text-xs text-slate-500">of ${{ '%.0f' | format(stats.budget) }} budget</div>
+  </div>
+</div>
+
+<div class="mt-6 grid gap-6 lg:grid-cols-3">
+  <section class="rounded-xl border border-slate-200 bg-white shadow-sm lg:col-span-2">
+    <div class="border-b border-slate-100 px-5 py-3 font-medium">Recent activity</div>
+    <ul class="divide-y divide-slate-100">
+      {% for a in stats.activity %}
+        <li class="flex items-start justify-between gap-4 px-5 py-3 text-sm">
+          <div class="min-w-0">
+            <div class="font-medium text-slate-800">{{ a.action.replace('_', ' ') }}</div>
+            <div class="truncate text-slate-500">{{ a.reason }}</div>
+          </div>
+          <div class="shrink-0 text-right text-xs text-slate-400">{{ a.actor }}<br>{{ a.created_at.strftime('%b %d, %H:%M') }}</div>
+        </li>
+      {% else %}
+        <li class="px-5 py-8 text-center text-sm text-slate-500">Nothing yet. Create your first client to get started.</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div class="mb-3 font-medium">Quick actions</div>
+    <div class="space-y-2">
+      <a href="/clients/new" class="{{ btn_class('primary') }} w-full justify-center">{{ icon("plus", "h-4 w-4") }} New client</a>
+      <a href="/clients" class="{{ btn_class('secondary') }} w-full justify-center">Import clients</a>
+      <a href="/costs" class="{{ btn_class('secondary') }} w-full justify-center">View costs</a>
+    </div>
+    <p class="mt-4 text-xs text-slate-500">Tip: press <kbd class="rounded border px-1">Ctrl</kbd>+<kbd class="rounded border px-1">K</kbd> to open the AI assistant.</p>
+  </section>
+</div>
+{% endblock %}

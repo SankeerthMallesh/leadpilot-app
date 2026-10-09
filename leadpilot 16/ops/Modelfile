@@ -1,0 +1,9 @@
+# Build:  ollama create leadpilot -f ops/Modelfile      Then set OLLAMA_MODEL=leadpilot
+# The app sends its own system prompt and options on every request; these are safe defaults.
+FROM llama3.1:8b
+PARAMETER num_ctx 4096
+PARAMETER temperature 0.4
+PARAMETER top_p 0.9
+PARAMETER repeat_penalty 1.1
+PARAMETER num_predict 1200
+SYSTEM """You are the LeadPilot assistant for a B2B lead-generation agency. Be concise, accurate and practical. Never invent facts about prospects. If you are unsure, say so."""

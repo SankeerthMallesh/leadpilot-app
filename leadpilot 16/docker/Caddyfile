@@ -1,0 +1,4 @@
+# Replace app.example.com with your domain; Caddy provisions HTTPS automatically.
+app.example.com {
+    reverse_proxy 127.0.0.1:8000
+}

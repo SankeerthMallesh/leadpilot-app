@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+{% from "_macros.html" import page_header, btn_class %}
+{% block title %}{{ 'Edit' if target else 'New' }} client · {{ app_name }}{% endblock %}
+{% block crumbs %}<a href="/clients" class="text-sm text-slate-500 hover:text-slate-700">Clients</a> <span class="text-slate-300">/</span> <span class="text-sm">{{ target.name if target else 'New' }}</span>{% endblock %}
+{% block content %}
+{{ page_header(('Edit ' ~ target.name) if target else 'New client', 'Fill in as much as you can. The AI builds the ICP from this, and you approve it before anything runs.') }}
+
+{% if errors %}
+  <div class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">
+    <div class="font-medium">Please fix these:</div>
+    <ul class="mt-1 list-disc pl-5">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  </div>
+{% endif %}
+
+<form method="post" action="{{ '/clients/' ~ target.id ~ '/edit' if target else '/clients' }}" class="space-y-6" data-busy="Saving…">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  {% for title, blurb, fields in sections %}
+    <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h2 class="font-medium text-slate-900">{{ title }}</h2>
+      <p class="mb-4 text-sm text-slate-500">{{ blurb }}</p>
+      <div class="grid gap-4 md:grid-cols-2">
+      {% for field, label, kind, help in fields %}
+        <div class="{{ 'md:col-span-2' if kind in ('textarea', 'lines', 'regions') else '' }}">
+          <label class="block text-sm font-medium text-slate-700" for="f_{{ field }}">{{ label }}</label>
+          {% if kind == "text" %}
+            <input id="f_{{ field }}" name="{{ field }}" value="{{ values.get(field, '') }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+          {% elif kind == "int" %}
+            <input id="f_{{ field }}" name="{{ field }}" type="number" min="1" max="200" value="{{ values.get(field, 30) }}" class="mt-1 w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+          {% elif kind == "textarea" or kind == "lines" %}
+            <textarea id="f_{{ field }}" name="{{ field }}" rows="3" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200">{{ values.get(field, '') }}</textarea>
+          {% elif kind == "select" %}
+            <select id="f_{{ field }}" name="{{ field }}" class="mt-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+              {% for opt in help.split('|') %}<option value="{{ opt }}" {{ 'selected' if values.get(field, 'reply') == opt else '' }}>{{ opt }}</option>{% endfor %}
+            </select>
+          {% elif kind == "regions" %}
+            {% set chosen = values.get(field) if values.get(field) is not none else ['US'] %}
+            <div class="mt-2 flex flex-wrap gap-3 text-sm">
+              {% for r in ['US', 'CA', 'UK', 'EU'] %}
+                <label class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-1.5 has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50">
+                  <input type="checkbox" name="{{ field }}" value="{{ r }}" {{ 'checked' if r in chosen else '' }}> {{ r }}</label>
+              {% endfor %}
+            </div>
+          {% endif %}
+          {% if help and kind != "select" %}<p class="mt-1 text-xs text-slate-500">{{ help }}</p>{% endif %}
+        </div>
+      {% endfor %}
+      </div>
+    </section>
+  {% endfor %}
+  <p class="text-xs text-slate-500">Regional settings are not legal advice. Have a lawyer review them before enabling CA, UK or EU.</p>
+  <div class="flex gap-3">
+    <button class="{{ btn_class('primary') }}">{{ 'Save changes' if target else 'Create client' }}</button>
+    <a href="{{ '/clients/' ~ target.id if target else '/clients' }}" class="{{ btn_class('secondary') }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

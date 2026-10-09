@@ -1,0 +1,128 @@
+{% from "_macros.html" import icon %}
+{% set nav = [("/", "Dashboard", "home"), ("/clients", "Clients", "users"), ("/costs", "Costs", "coin"), ("/system", "System", "cog")] %}
+<!doctype html>
+<html lang="en" class="h-full"{% if ai_warm %} data-ai-warm{% endif %}>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%234f46e5'/%3E%3Cpath d='M7 12l3 3 7-7' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <script>try{document.documentElement.dataset.ai=localStorage.getItem("lp_ai")||"open"}catch(e){}</script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <link rel="stylesheet" href="/static/app.css">
+  <script defer src="/static/app.js"></script>
+  <script defer src="/static/email.js"></script>
+</head>
+<body class="h-full bg-slate-50 text-slate-800 antialiased" hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'>
+<div class="flex h-full">
+
+  <!-- Sidebar -->
+  <nav class="hidden md:flex w-60 shrink-0 flex-col border-r border-slate-200 bg-white" aria-label="Main">
+    <a href="/" class="flex items-center gap-2 px-5 py-5">
+      <span class="grid h-8 w-8 place-items-center rounded-lg bg-indigo-600 text-white">{{ icon("check", "h-5 w-5") }}</span>
+      <span class="text-lg font-semibold tracking-tight text-slate-900">{{ app_name }}</span>
+    </a>
+    <div class="flex-1 space-y-1 px-3">
+      {% for href, label, ic in nav %}
+        {% set active = current_path == href or (href != "/" and current_path.startswith(href)) %}
+        <a href="{{ href }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium {{ 'bg-indigo-50 text-indigo-700' if active else 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}" {% if active %}aria-current="page"{% endif %}>
+          {{ icon(ic) }}{{ label }}
+        </a>
+      {% endfor %}
+    </div>
+    <div class="border-t border-slate-200 p-4">
+      <div class="truncate text-xs text-slate-500">{{ user_email }}</div>
+      <form method="post" action="/logout" class="mt-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900">{{ icon("logout", "h-4 w-4") }} Log out</button>
+      </form>
+      <div class="mt-3 text-[11px] text-slate-400">v{{ app_version }}</div>
+    </div>
+  </nav>
+
+  <!-- Main column -->
+  <div class="flex min-w-0 flex-1 flex-col">
+    <header class="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:px-6">
+      <div class="flex items-center gap-3 md:hidden">
+        <a href="/" class="font-semibold text-indigo-700">{{ app_name }}</a>
+        {% for href, label, ic in nav %}<a href="{{ href }}" class="text-sm text-slate-600">{{ label }}</a>{% endfor %}
+      </div>
+      <div class="hidden md:block">{% block crumbs %}{% endblock %}</div>
+      <div class="flex items-center gap-2">
+        {% if dry_run %}<span class="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20" title="No real emails are sent">Dry run</span>{% endif %}
+        <button type="button" id="ai-toggle" class="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700" title="Toggle AI assistant (Ctrl+K)">
+          {{ icon("sparkles", "h-4 w-4") }} AI
+        </button>
+      </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto">
+      <div class="mx-auto max-w-5xl p-4 md:p-8">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+
+  <!-- AI panel (right side) -->
+  <aside id="ai-panel" class="w-full shrink-0 flex-col border-l border-slate-200 bg-white lg:w-[26rem]" aria-label="AI assistant">
+    <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+      <div class="flex items-center gap-2">
+        <span class="grid h-8 w-8 place-items-center rounded-lg bg-indigo-100 text-indigo-700">{{ icon("sparkles", "h-4 w-4") }}</span>
+        <div>
+          <div class="text-sm font-semibold text-slate-900">AI assistant</div>
+          <div class="text-xs text-slate-500">{% if assistant_client_id %}Knows this client's intake and ICP{% else %}General help{% endif %}</div>
+        </div>
+      </div>
+      <div class="flex gap-2 text-xs">
+        <form hx-post="/assistant/clear" hx-target="#chat-log" hx-swap="innerHTML" hx-confirm="Clear this chat?">
+          <input type="hidden" name="client_id" value="{{ assistant_client_id or '' }}">
+          <button class="rounded-md border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-50">Clear</button>
+        </form>
+        <button type="button" id="ai-close" class="rounded-md border border-slate-300 px-2 py-1 text-slate-600 hover:bg-slate-50">Hide</button>
+      </div>
+    </div>
+
+    <div id="chat-log" class="flex-1 space-y-3 overflow-y-auto px-4 py-4" role="log" aria-live="polite" aria-relevant="additions" aria-label="Conversation with the AI assistant"
+         hx-get="/assistant/history{% if assistant_client_id %}?client_id={{ assistant_client_id }}{% endif %}"
+         hx-trigger="load" hx-swap="innerHTML">
+      <p class="text-sm text-slate-400">Loading…</p>
+    </div>
+
+    <div class="border-t border-slate-200 p-3">
+      <div id="chat-busy" class="htmx-indicator mb-2 flex items-center gap-1 text-xs text-slate-500">
+        <span class="typing"><i></i><i></i><i></i></span> AI is thinking
+      </div>
+      <div class="mb-2 flex flex-wrap gap-1.5 text-xs">
+        {% if assistant_client_id %}
+          <button type="button" class="chip rounded-full border border-slate-300 px-2.5 py-1 text-slate-600 hover:bg-slate-50" data-q="Review this client's intake and tell me what is missing or weak for targeting.">Review intake</button>
+          <button type="button" class="chip rounded-full border border-slate-300 px-2.5 py-1 text-slate-600 hover:bg-slate-50" data-q="Suggest 10 search phrases to find prospects matching this ICP.">Search ideas</button>
+          <button type="button" class="chip rounded-full border border-slate-300 px-2.5 py-1 text-slate-600 hover:bg-slate-50" data-q="What compliance risks should I check before emailing for this client?">Compliance check</button>
+        {% else %}
+          <button type="button" class="chip rounded-full border border-slate-300 px-2.5 py-1 text-slate-600 hover:bg-slate-50" data-q="What should I prepare before onboarding a new client?">Onboarding tips</button>
+          <button type="button" class="chip rounded-full border border-slate-300 px-2.5 py-1 text-slate-600 hover:bg-slate-50" data-q="Explain the CAN-SPAM basics I must follow for B2B cold email.">CAN-SPAM basics</button>
+        {% endif %}
+      </div>
+      <div class="mb-2 flex gap-2 text-xs">
+        <button type="button" id="chat-stop" aria-label="Stop generating" hidden class="rounded-md border border-red-300 px-2.5 py-1 text-red-700 hover:bg-red-50">Stop (Esc)</button>
+        <button type="button" id="chat-regen" aria-label="Regenerate the last reply" hidden class="rounded-md border border-slate-300 px-2.5 py-1 text-slate-600 hover:bg-slate-50">Regenerate</button>
+      </div>
+      <form id="chat-form" action="/assistant/chat" method="post" class="flex items-end gap-2">
+        <input type="hidden" name="client_id" value="{{ assistant_client_id or '' }}">
+        <input type="hidden" name="page_path" value="{{ current_path }}">
+        <textarea id="chat-input" name="message" aria-label="Message to the AI assistant" rows="2" required maxlength="4000" placeholder="Ask the AI…  Enter to send, Shift+Enter for a new line"
+          class="flex-1 resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"></textarea>
+        <button id="chat-send" type="submit" aria-label="Send message" class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60">Send</button>
+      </form>
+    </div>
+  </aside>
+</div>
+
+<div id="toasts" class="pointer-events-none fixed right-4 top-4 z-50 flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2">
+  {% for m in flash_messages %}
+    <div class="toast pointer-events-auto rounded-lg border px-4 py-3 text-sm shadow-lg {{ 'border-red-200 bg-red-50 text-red-800' if m.kind == 'err' else 'border-green-200 bg-green-50 text-green-800' }}" role="status">{{ m.text }}</div>
+  {% endfor %}
+</div>
+</body>
+</html>

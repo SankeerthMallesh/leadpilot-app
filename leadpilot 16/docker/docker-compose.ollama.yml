@@ -1,0 +1,30 @@
+# Optional add-on: run Ollama next to the app.
+#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.ollama.yml up -d --build
+#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.ollama.yml exec ollama ollama pull llama3.1:8b
+# Ollama is NOT published to the host or internet; only the app container can reach it.
+# Remove the `deploy` block for CPU-only machines. GPU use needs the NVIDIA Container Toolkit.
+services:
+  ollama:
+    image: ollama/ollama:latest
+    environment:
+      OLLAMA_KEEP_ALIVE: 30m
+      OLLAMA_NUM_PARALLEL: "2"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_FLASH_ATTENTION: "1"
+      OLLAMA_KV_CACHE_TYPE: q8_0
+    volumes: [ollama:/root/.ollama]
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+  app:
+    environment:
+      LLM_PROVIDER: ollama
+      OLLAMA_BASE_URL: http://ollama:11434
+    depends_on: [postgres, ollama]
+volumes:
+  ollama:

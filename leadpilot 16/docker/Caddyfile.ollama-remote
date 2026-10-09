@@ -1,0 +1,15 @@
+# Use ONLY when Ollama runs on a separate GPU machine. Put this on that machine.
+# The LeadPilot server sends:  Authorization: Bearer <OLLAMA_API_KEY>   (same value as OLLAMA_PROXY_TOKEN here)
+# Browsers never call this endpoint, so no CORS headers are needed.
+ollama.example.com {
+    @unauth {
+        not header Authorization "Bearer {env.OLLAMA_PROXY_TOKEN}"
+    }
+    respond @unauth 401
+    reverse_proxy 127.0.0.1:11434 {
+        flush_interval -1          # do not buffer: tokens must stream through immediately
+        transport http {
+            response_header_timeout 5m   # allows a cold model load
+        }
+    }
+}

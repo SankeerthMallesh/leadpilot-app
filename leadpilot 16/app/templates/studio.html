@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% from "_macros.html" import page_header, btn_class, icon %}
+{% block title %}Email Studio · {{ client.name }}{% endblock %}
+{% block crumbs %}<a href="/clients" class="text-sm text-slate-500 hover:text-slate-700">Clients</a> <span class="text-slate-300">/</span> <a href="/clients/{{ client.id }}" class="text-sm text-slate-500 hover:text-slate-700">{{ client.name }}</a> <span class="text-slate-300">/</span> <span class="text-sm">Email Studio</span>{% endblock %}
+{% block content %}
+{{ page_header("Email Studio", "Write a grounded, self-checked sequence for one prospect. Emails may only use the facts you provide.") }}
+
+{% if not approved %}
+  <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+    This client has no approved ICP yet. <a class="font-medium underline" href="/clients/{{ client.id }}">Generate and approve one</a> first.
+  </div>
+{% else %}
+<form hx-post="/clients/{{ client.id }}/studio/generate" hx-target="#studio-result" hx-indicator="#studio-busy" hx-disabled-elt="find button"
+      class="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+  <div class="grid gap-4 md:grid-cols-2">
+    <label class="block text-sm font-medium text-slate-700">Prospect company
+      <input name="company" required maxlength="120" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"></label>
+    <label class="block text-sm font-medium text-slate-700">Contact first name <span class="font-normal text-slate-400">(optional)</span>
+      <input name="first_name" maxlength="40" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"></label>
+    <label class="block text-sm font-medium text-slate-700">Contact title <span class="font-normal text-slate-400">(optional)</span>
+      <input name="title" maxlength="120" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"></label>
+    <label class="block text-sm font-medium text-slate-700">Website <span class="font-normal text-slate-400">(optional)</span>
+      <input name="website" maxlength="200" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"></label>
+  </div>
+  <label class="block text-sm font-medium text-slate-700">Verified facts about the prospect
+    <textarea name="facts" rows="6" required placeholder="One fact per line. Optional source after a pipe.&#10;Opened a second location in Tampa in 2025 | https://example.com/news&#10;Hiring a part-time office manager | https://example.com/careers"
+      class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"></textarea>
+  </label>
+  <p class="text-xs text-slate-500">Only paste things you have verified on their public site or a trusted source. The AI is forbidden from saying anything about the prospect that is not in this list. Phase 5 will fill this list automatically from crawled, re-verified pages.</p>
+  <div class="flex items-center gap-3">
+    <button class="{{ btn_class('primary') }}">{{ icon("sparkles", "h-4 w-4") }} Generate sequence</button>
+    <span id="studio-busy" class="htmx-indicator flex items-center gap-2 text-sm text-slate-500"><span class="typing"><i></i><i></i><i></i></span> Writing, linting and reviewing (10–40s)</span>
+  </div>
+</form>
+{% endif %}
+
+<div id="studio-result" class="mt-6"></div>
+{% endblock %}

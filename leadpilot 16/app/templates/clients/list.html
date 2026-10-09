@@ -1,0 +1,53 @@
+{% extends "layout.html" %}
+{% from "_macros.html" import badge, page_header, btn_class, icon %}
+{% block title %}Clients · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+  <div>
+    <h1 class="text-2xl font-semibold tracking-tight text-slate-900">Clients</h1>
+    <p class="mt-1 text-sm text-slate-500">{{ clients | length }} shown. Each client is an isolated workspace.</p>
+  </div>
+  <a href="/clients/new" class="{{ btn_class('primary') }}">{{ icon("plus", "h-4 w-4") }} New client</a>
+</div>
+
+<form method="get" action="/clients" class="mb-4 flex flex-wrap gap-2">
+  <input name="q" value="{{ q }}" placeholder="Search by name…" class="w-full flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto">
+  <select name="status" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+    <option value="">All statuses</option>
+    {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s == status else '' }}>{{ s }}</option>{% endfor %}
+  </select>
+  <button class="{{ btn_class('secondary') }}">Filter</button>
+</form>
+
+<div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+  <table class="min-w-full text-sm">
+    <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500"><tr>
+      <th class="px-5 py-3">Name</th><th class="px-5 py-3">Status</th><th class="px-5 py-3">Regions</th><th class="px-5 py-3">ICP</th></tr></thead>
+    <tbody class="divide-y divide-slate-100">
+    {% for c in clients %}
+      <tr class="hover:bg-slate-50">
+        <td class="px-5 py-3"><a class="font-medium text-indigo-700 hover:underline" href="/clients/{{ c.id }}">{{ c.name }}</a></td>
+        <td class="px-5 py-3">{{ badge(c.status) }}</td>
+        <td class="px-5 py-3 text-slate-600">{{ c.allowed_regions_json | join(", ") }}</td>
+        <td class="px-5 py-3">{{ badge("approved" if approved[c.id] else "needs approval") }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4" class="px-5 py-12 text-center">
+        <div class="text-slate-500">{% if q or status %}No clients match your filter.{% else %}No clients yet.{% endif %}</div>
+        {% if not q and not status %}<a href="/clients/new" class="mt-3 {{ btn_class('primary') }}">Create your first client</a>{% endif %}
+      </td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<details class="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+  <summary class="cursor-pointer font-medium">Import from JSON / YAML</summary>
+  <form method="post" action="/clients/import" enctype="multipart/form-data" class="mt-3" data-busy="Importing…">
+    <p class="mb-3 text-sm text-slate-500">One client object or a list. If any item is invalid, nothing is created and every error is listed.</p>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="file" name="file" accept=".json,.yaml,.yml" required class="text-sm">
+    <button class="{{ btn_class('secondary') }} ml-2">Import</button>
+  </form>
+</details>
+{% endblock %}
